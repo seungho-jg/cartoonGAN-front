@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
-import ImageUpload from './components/ImageUpload';
-import StyleSelector from './components/StyleSelector';
 import ResultDisplay from './components/ResultDisplay';
 import { convertImage } from './api/cartoonGanApi';
+import CameraCapture from './components/CameraCapture';
+import LoadingScreen from './components/LoadingScreen';
 
 const App: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<File | null>(null);
   const [cartoonImage, setCartoonImage] = useState<string | null>(null);
-  const [selectedStyle, setSelectedStyle] = useState<string>('style1');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [currentView, setCurrentView] = useState<'camera' | 'result'>('camera');
 
-  const handleConvert = async () => {
-    if (!originalImage) return;
-
+  const handleImageCapture = async (file: File) => {
+    setOriginalImage(file);
     setIsLoading(true);
     try {
-      const result = await convertImage(originalImage, selectedStyle);
+      const result = await convertImage(file);
       setCartoonImage(result);
+      setCurrentView('result');
     } catch (error) {
       console.error('Error during conversion:', error);
       // 에러 처리 로직 추가
@@ -25,21 +25,38 @@ const App: React.FC = () => {
     }
   };
 
+  const handleReturnToCamera = () => {
+    setCurrentView('camera');
+    setOriginalImage(null);
+    setCartoonImage(null);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      <h1 className="text-3xl font-bold text-center mb-8">CartoonGAN Image Converter</h1>
-      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl">
-        <div className="p-8">
-          <ImageUpload setOriginalImage={setOriginalImage} />
-          <StyleSelector selectedStyle={selectedStyle} setSelectedStyle={setSelectedStyle} />
-          <button
-            onClick={handleConvert}
-            disabled={!originalImage || isLoading}
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50"
-          >
-            {isLoading ? 'Converting...' : 'Convert'}
-          </button>
-          <ResultDisplay originalImage={originalImage} cartoonImage={cartoonImage} />
+    <div className="h-screen flex flex-col bg-slate-300 p-2">
+      <div className="h-full max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="flex-grow overflow-hidden">
+          { currentView === 'camera' ? (
+              <CameraCapture 
+                onCapture={handleImageCapture} 
+                onFileSelect={handleImageCapture}
+                isCapturing={isLoading}
+                />
+          ) : (
+            <>
+              <ResultDisplay originalImage={originalImage} cartoonImage={cartoonImage} />
+              <button
+                onClick={handleReturnToCamera}
+                className="absolute left-0 w-full bottom-0 bg-blue-500 text-white py-2 px-4 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              >
+                Back to Camera
+              </button>
+            </>
+          )}
+          {isLoading && (
+            <div className='absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center'>
+              <LoadingScreen />
+            </div>
+          )}
         </div>
       </div>
     </div>
